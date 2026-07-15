@@ -130,9 +130,11 @@ def main():
         print(f"Error: No se encontró el video {args.video}")
         return
 
-    # Puedes cambiar los modelos según lo que hayan visto en clase (ej: yolo11n.pt, yolov8n.pt)
-    model_1 = "yolo11n.pt" # Representa la red actual
-    model_2 = "yolov8n.pt" # Representa la red anterior (o v26 si usaron algún fork específico)
+    # Modelos especificados en la rúbrica: YOLOv12 y YOLOv26
+    # Ultralytics los descargará automáticamente al ejecutar por primera vez.
+    # Si alguno no está disponible, cambiar por la versión más cercana (ej: yolo11n.pt)
+    model_1 = "yolo12n.pt"  # YOLOv12 (rúbrica requisito a)
+    model_2 = "yolo26n.pt"  # YOLOv26 (rúbrica requisito a)
     
     print("\n" + "="*50)
     print("  INICIANDO BENCHMARK PARTE 1B - YOLO")
