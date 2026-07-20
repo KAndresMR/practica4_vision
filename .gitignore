@@ -1,0 +1,4 @@
+*.mp4
+*.pt
+parte1c_cpp/build/
+.DS_Store
