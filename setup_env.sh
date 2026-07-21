@@ -34,7 +34,10 @@ echo "🔄 Activando el entorno '$ENV_NAME'..."
 conda activate $ENV_NAME
 
 # 6. Instalar dependencias
-echo "📥 Instalando librerías desde requirements_lab.txt..."
+echo "📥 Instalando PyTorch con soporte CUDA..."
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+echo "📥 Instalando el resto de librerías..."
 python -m pip install --upgrade pip
 # Workaround para evitar el error de __version__ con basicsr en instalaciones limpias
 python -m pip install tb-nightly || true

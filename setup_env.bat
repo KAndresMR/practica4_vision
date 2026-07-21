@@ -55,7 +55,10 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 :: 5. Instalar dependencias
-echo [INFO] Instalando librerias desde requirements_lab.txt...
+echo [INFO] Instalando PyTorch con soporte CUDA...
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+echo [INFO] Instalando el resto de librerias...
 python -m pip install --upgrade pip
 python -m pip install tb-nightly
 python -m pip install -r requirements_lab.txt
