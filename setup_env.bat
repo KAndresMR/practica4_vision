@@ -6,26 +6,33 @@ echo =========================================================
 
 :: 1. Comprobar si conda está instalado
 where conda >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    :: Intentar buscar conda en las rutas de instalacion comunes
-    if exist "%USERPROFILE%\Miniconda3\condabin\conda.bat" (
-        set "PATH=%USERPROFILE%\Miniconda3\condabin;%PATH%"
-    ) else if exist "%USERPROFILE%\Anaconda3\condabin\conda.bat" (
-        set "PATH=%USERPROFILE%\Anaconda3\condabin;%PATH%"
-    ) else (
-        echo [ERROR] Conda no se detecto automaticamente.
-        echo Por favor, abre el "Anaconda Prompt" desde el menu de inicio de Windows,
-        echo navega a esta carpeta y ejecuta setup_env.bat desde ahi.
-        pause
-        exit /b 1
-    )
-)
+if %ERRORLEVEL% EQU 0 goto conda_found
+
+:: Fallbacks si conda no esta en el PATH global
+if exist "%USERPROFILE%\Miniconda3\condabin\conda.bat" goto set_miniconda
+if exist "%USERPROFILE%\Anaconda3\condabin\conda.bat" goto set_anaconda
+
+echo [ERROR] Conda no se detecto automaticamente.
+echo Por favor, abre el "Anaconda Prompt" desde el menu de inicio de Windows,
+echo navega a esta carpeta y ejecuta setup_env.bat desde ahi.
+pause
+exit /b 1
+
+:set_miniconda
+set "PATH=%USERPROFILE%\Miniconda3\condabin;%PATH%"
+goto conda_found
+
+:set_anaconda
+set "PATH=%USERPROFILE%\Anaconda3\condabin;%PATH%"
+goto conda_found
+
+:conda_found
 echo [OK] Conda detectado.
 
 :: 2. Aceptar Términos de Servicio de Anaconda (Previene error de CondaToS)
 echo [INFO] Aceptando Terminos de Servicio (si es requerido)...
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >nul 2>&1
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r >nul 2>&1
+call conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >nul 2>&1
+call conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r >nul 2>&1
 
 :: 3. Crear el entorno virtual
 set ENV_NAME=vision_p4
