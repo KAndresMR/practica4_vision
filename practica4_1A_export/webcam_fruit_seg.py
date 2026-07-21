@@ -63,16 +63,14 @@ def main():
     device = 0 if args.device == "gpu" and torch.cuda.is_available() else "cpu"
     device_name = "GPU (CUDA)" if device != "cpu" else "CPU"
 
-    print(f"
-{'='*60}")
+    print(f"\n{'='*60}")
     print(f"  Práctica 4 - Segmentación de Frutas")
     print(f"  Dispositivo: {device_name}")
     print(f"  MAC Address: {get_mac_address()}")
     if device != "cpu":
         print(f"  GPU: {torch.cuda.get_device_name(0)}")
         print(f"  VRAM: {get_gpu_memory_usage()}")
-    print(f"{'='*60}
-")
+    print(f"{'='*60}\n")
 
     # Cargar modelo
     model = YOLO(args.model)
@@ -150,8 +148,7 @@ def main():
 
     # Resumen final
     if fps_history:
-        print(f"
-{'='*60}")
+        print(f"\n{'='*60}")
         print(f"  RESUMEN DE SESIÓN")
         print(f"  Dispositivo: {device_name}")
         print(f"  Frames procesados: {len(fps_history)}")
