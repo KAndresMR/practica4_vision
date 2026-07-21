@@ -7,10 +7,18 @@ echo =========================================================
 :: 1. Comprobar si conda está instalado
 where conda >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Conda no esta instalado o no esta en el PATH de Windows.
-    echo Por favor instala Miniconda o Anaconda antes de ejecutar este script.
-    pause
-    exit /b 1
+    :: Intentar buscar conda en las rutas de instalacion comunes
+    if exist "%USERPROFILE%\Miniconda3\condabin\conda.bat" (
+        set "PATH=%USERPROFILE%\Miniconda3\condabin;%PATH%"
+    ) else if exist "%USERPROFILE%\Anaconda3\condabin\conda.bat" (
+        set "PATH=%USERPROFILE%\Anaconda3\condabin;%PATH%"
+    ) else (
+        echo [ERROR] Conda no se detecto automaticamente.
+        echo Por favor, abre el "Anaconda Prompt" desde el menu de inicio de Windows,
+        echo navega a esta carpeta y ejecuta setup_env.bat desde ahi.
+        pause
+        exit /b 1
+    )
 )
 echo [OK] Conda detectado.
 
