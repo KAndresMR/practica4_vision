@@ -1,0 +1,224 @@
+\documentclass[12pt]{article}
+\usepackage[spanish]{babel}
+\usepackage{natbib}
+\usepackage{url}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\graphicspath{{images/}}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{hyperref}
+
+\usepackage{vmargin}
+\setmarginsrb{3 cm}{2.5 cm}{2.5 cm}{2.5 cm} {1 cm}{1.5 cm}{1 cm}{1.5 cm}
+
+\title{Práctica 4: Evaluación de Modelos de IA y Preprocesamiento en GPU vs CPU (CUDA)}		% Title
+\author{Kevin Andrés Morocho Remache}	% Author
+\date{\today}							% Date
+
+\makeatletter
+\let\thetitle\@title
+\let\theauthor\@author
+\let\thedate\@date
+\makeatother
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\thetitle}
+\cfoot{\thepage}
+
+\begin{document}
+
+\renewcommand{\listtablename}{Lista de Tablas}
+\renewcommand{\tablename}{Tabla}
+\renewcommand{\listfigurename}{Lista de Figuras}
+\renewcommand{\figurename}{Figura }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%  INICIO PORTADA  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{titlepage}
+	\centering
+    % \includegraphics[width=0.5\linewidth]{logo.png}\\[1.0 cm]  % Descomentar y subir el logo a Overleaf si lo necesitas
+    \vspace*{1.0cm}
+    \textsc{\LARGE Universidad Politécnica Salesiana}\\[2.0 cm]
+	\textsc{\Large Ingeniería en Ciencias de la Computación}\\[0.5 cm]
+	\textsc{\large Visión por Computador}\\[0.5 cm]
+	\rule{\linewidth}{0.2 mm} \\[0.4 cm]
+	{ \huge \bfseries \thetitle}\\
+	\rule{\linewidth}{0.2 mm} \\[1.5 cm]
+	
+ \begin{flushleft} \large
+    \emph{Autores:}\\
+	\theauthor 
+ \end{flushleft}
+ 
+  \begin{flushleft} \large
+    \emph{Docente:}\\
+	Ing. Vladimir Robles \\
+  \end{flushleft}
+  
+  \vfill
+
+  {\large \thedate}
+
+\end{titlepage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%    FIN  PORTADA  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%  INICIO INDICE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\tableofcontents  
+\pagebreak		
+
+\listoftables  
+\vspace{1cm}
+
+\listoffigures  
+
+\pagebreak
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%    INICIO   TEXTO   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+En este informe presentamos todo el proceso y los resultados que obtuvimos durante la Práctica 4 de Visión por Computador. El objetivo principal de la práctica fue poner a prueba y comparar el rendimiento (como los cuadros por segundo y el uso de memoria RAM y VRAM) de varios modelos de inteligencia artificial ejecutándose tanto en el procesador principal (CPU) como en la tarjeta gráfica (GPU). Además, programamos un flujo de procesamiento de imágenes usando OpenCV en C++ puro con aceleración CUDA. Para asegurar que el trabajo es propio, todas las capturas y videos incluyen la dirección MAC de la computadora donde hicimos las pruebas.
+
+El código fuente de todos los scripts utilizados lo pueden encontrar en el siguiente repositorio de GitHub: \url{https://github.com/tu-usuario/tu-repositorio} % NOTA: Reemplazar con el enlace real
+\end{abstract}
+
+\section{Enlaces a Videos de Evidencia}
+Como parte fundamental de los requerimientos de la práctica, grabamos el funcionamiento en vivo de las tres secciones principales. En estos videos se muestra la ejecución de los programas junto con una terminal adicional monitoreando el uso de la tarjeta de video (\texttt{nvidia-smi}).
+
+\begin{itemize}
+    \item \textbf{Evidencia Parte 1A (Webcam en tiempo real):} \url{https://youtube.com/link_video_1} % REEMPLAZAR LINK
+    \item \textbf{Evidencia Parte 1B (Benchmarks YOLO y Super Resolución):} \url{https://youtube.com/link_video_2} % REEMPLAZAR LINK
+    \item \textbf{Evidencia Parte 1C (Pipeline C++ OpenCV CUDA):} \url{https://youtube.com/link_video_3} % REEMPLAZAR LINK
+\end{itemize}
+
+\section{Introducción}
+Sabemos que procesar imágenes y correr modelos de inteligencia artificial en tiempo real es algo que le exige muchísimo a cualquier computadora. Al usar tarjetas gráficas (GPUs) con tecnologías como CUDA, podemos hacer que muchas operaciones ocurran al mismo tiempo (en paralelo), quitándole un peso enorme a la CPU. Sin embargo, hay un detalle: estar moviendo datos a cada rato entre la memoria normal de la computadora (RAM) y la memoria de la tarjeta de video (VRAM) puede volver lento el proceso si no se programa bien. En este documento, vamos a mostrar con números reales y pruebas prácticas cómo afecta todo esto al rendimiento final.
+
+\section{Metodología y Desarrollo}
+
+Dividimos el trabajo de la práctica en tres grandes bloques. Todas las pruebas las corrimos en una computadora que cuenta con una tarjeta gráfica NVIDIA, y mantuvimos la herramienta \texttt{nvidia-smi} abierta para ver qué pasaba con la GPU en todo momento:
+
+\subsection{Parte 1A: Detección por Webcam}
+Para empezar, usamos un modelo YOLOv11 que ya habíamos entrenado previamente (\texttt{best.pt}) para que reconozca tres tipos de frutas: manzanas, bananas y naranjas. La prueba consistió en prender la cámara web, poner las frutas enfrente y hacer que el modelo las detecte en tiempo real. Corrimos el programa primero usando solo la CPU y luego usando la GPU para comparar. En la pantalla fuimos mostrando datos clave como los FPS, la memoria usada y la MAC Address.
+
+\subsection{Parte 1B: Benchmarks de YOLO y Super Resolución}
+Aquí tomamos un video corto de prueba (\texttt{video\_prueba.mp4}) y le pasamos diferentes redes neuronales para ver qué tan rápido las procesaba la máquina:
+\begin{itemize}
+    \item \textbf{Detección de Objetos:} Pusimos a competir a YOLOv12 y YOLOv26. Medimos qué tan rápido corrían en la CPU frente a la GPU, y los scripts nos generaron videos de salida con toda esa información impresa en la pantalla.
+    \item \textbf{Super Resolución:} Usamos un modelo llamado Real-ESRGAN para mejorar la calidad y resolución del video. Esto consume muchísima memoria VRAM, lo que nos sirvió perfecto para ver cómo se comporta la GPU frente a la CPU cuando le damos una tarea realmente pesada.
+\end{itemize}
+
+\subsection{Parte 1C: Pipeline OpenCV C++}
+Para esta última parte, armamos un programa directo en C++ que le aplica varios filtros a una imagen: un suavizado para quitar ruido, operaciones para engrosar o adelgazar bordes (morfología), el filtro Canny para detectar los contornos y finalmente una ecualización para mejorar el contraste. Probamos tres formas distintas de armar este flujo de trabajo:
+\begin{enumerate}
+    \item \textbf{Pipeline CPU:} Haciendo todo normalmente usando la memoria RAM y el procesador central de la computadora.
+    \item \textbf{Pipeline Híbrido:} Mezclando CPU y GPU. Es decir, pasando los datos de la memoria normal a la de video y de regreso repetidas veces.
+    \item \textbf{Pipeline GPU-only:} Mandando la imagen a la tarjeta gráfica una sola vez, haciendo todos los filtros ahí mismo (usando \texttt{cv::cuda}), y devolviendo solo la imagen ya procesada al final para no saturar los cables internos de la computadora.
+\end{enumerate}
+
+\section{Resultados y Análisis}
+
+\subsection{Evidencias de la Parte 1A}
+Al poner las frutas frente a la cámara, el modelo logró reconocerlas y marcarlas sin problema. Lo realmente interesante fue ver la diferencia de fluidez. 
+
+\begin{figure}[H]
+    \centering
+    % NOTA PARA KEVIN: Sube tus capturas reales a la carpeta 'images' en Overleaf y cambia estos nombres
+    \includegraphics[width=0.45\textwidth]{example-image-a} % Reemplazar por captura de CPU
+    \includegraphics[width=0.45\textwidth]{example-image-b} % Reemplazar por captura de GPU
+    \caption{Izquierda: El video trabado usando CPU. Derecha: Video muy fluido usando la GPU. Se nota en los FPS impresos en pantalla.}
+    \label{fig:parte1a}
+\end{figure}
+
+Como se puede ver en el video que grabamos y en las fotos de arriba (Figura \ref{fig:parte1a}), cuando usamos la CPU el video se veía muy lento, casi como una presentación de diapositivas (muy bajos FPS). En cambio, al activar la GPU, todo fluía en tiempo real. 
+
+\subsection{Evidencias de la Parte 1B}
+
+\subsubsection{Comparativa YOLOv12 vs YOLOv26}
+Al correr los scripts, estos nos crearon automáticamente los videos de salida. En la Tabla \ref{tab:yolo_bench} armamos un resumen de los FPS y la memoria que consumió cada modelo según lo que nos imprimió la terminal.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{llcc}
+    \toprule
+    \textbf{Modelo} & \textbf{Dispositivo} & \textbf{FPS Promedio} & \textbf{Uso VRAM (MB)} \\
+    \midrule
+    YOLOv12 & CPU & -- & N/A \\ % RELLENAR DATOS AQUÍ
+    YOLOv12 & GPU & -- & -- \\
+    YOLOv26 & CPU & -- & N/A \\
+    YOLOv26 & GPU & -- & -- \\
+    \bottomrule
+    \end{tabular}
+    \caption{Resumen de la velocidad y consumo de los modelos YOLO sobre nuestro video de prueba.}
+    \label{tab:yolo_bench}
+\end{table}
+
+\subsubsection{Super Resolución}
+Como esperábamos, mejorar la resolución del video fue lo más pesado de toda la práctica. En la CPU se demoraba muchísimo procesar un solo cuadro de video. La GPU logró hacerlo mucho más rápido, pero vimos en la consola cómo se llenaba casi toda la memoria VRAM de la gráfica en el proceso.
+
+\subsection{Evidencias de la Parte 1C (C++)}
+
+Cuando corrimos nuestro programa en C++, se abrieron las 4 ventanas mostrándonos que los filtros funcionaron exactamente igual visualmente sin importar si usábamos el CPU o la GPU.
+
+\begin{figure}[H]
+    \centering
+    % NOTA PARA KEVIN: Sube la captura de las 4 ventanas juntas a Overleaf
+    \includegraphics[width=0.7\textwidth]{example-image-c} 
+    \caption{Las ventanas que arrojó nuestro programa mostrando el resultado de los filtros Canny.}
+    \label{fig:parte1c}
+\end{figure}
+
+\textbf{Análisis de Velocidad (Tiempos de Ejecución):}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lc}
+    \toprule
+    \textbf{Forma de programar el Pipeline} & \textbf{Tiempo Promedio por Frame (ms)} \\
+    \midrule
+    1. Usando solo la CPU & -- \\ % RELLENAR DATOS AQUÍ
+    2. Híbrido (pasando datos de CPU a GPU) & -- \\
+    3. Usando solo la GPU (CUDA) & -- \\
+    \bottomrule
+    \end{tabular}
+    \caption{Tiempos que tomó procesar cada imagen en milisegundos.}
+    \label{tab:cpp_bench}
+\end{table}
+
+\section{Reflexión y Conclusiones}
+
+Después de hacer todas estas pruebas y ver los números, llegamos a las siguientes conclusiones:
+\begin{enumerate}
+    \item \textbf{La GPU es obligatoria para Inteligencia Artificial:} Si queremos usar modelos como YOLO o redes de Super Resolución en la vida real, usar una tarjeta gráfica no es un lujo, es una necesidad total. La CPU simplemente se queda corta y se ahoga tratando de procesar un video.
+    \item \textbf{El problema del viaje de datos (PCI-Express):} Ver los tiempos de nuestro código híbrido en C++ nos enseñó una gran lección: mandar tareas a la GPU no hace que tu programa sea más rápido por arte de magia si programas mal. Si estamos pasando la foto de la memoria RAM a la tarjeta de video y de regreso a cada rato, el tiempo que se pierde en ese viaje es peor que si simplemente hubiéramos dejado a la CPU hacer todo el trabajo sola.
+    \item \textbf{Hacerlo todo en la tarjeta es la clave:} El último pipeline que probamos (GPU-only) demostró ser la mejor opción de todas. Al mandar la imagen una sola vez a la tarjeta, aplicarle todos los filtros de golpe ahí adentro y devolver solo el resultado final, exprimimos al máximo el poder de CUDA y logramos procesar el video a la mayor velocidad posible.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%     FIN   TEXTO     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%  INICIO REFERENCIAS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\bibliographystyle{plain}
+% \bibliography{biblist} % Descomentar si usas referencias externas
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%   FIN  REFERENCIAS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

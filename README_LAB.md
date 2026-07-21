@@ -1,125 +1,92 @@
-# Práctica 4 - Pruebas en Laboratorio Cómputo 8 (GPU)
+# Práctica 4 - Evaluación de Modelos de IA en GPU vs CPU
 
-Estos scripts están diseñados para cumplir con las **3 partes** de la rúbrica de la Práctica 4, utilizando las computadoras con tarjeta gráfica (GPU/CUDA).
-
----
-
-## 0. Preparación ANTES de ir al laboratorio
-
-Debes llevar en un **pendrive** (o hacer `git pull` desde tu repo):
-- Toda la carpeta `practica4/`
-- Tu modelo `best.pt` (de la Parte 1A, ya está en `practica4_1A_export/`)
-- Un **video corto (5-10 seg) en .mp4** de una calle o de objetos (para las pruebas 1B y 1C)
+Este repositorio contiene el código fuente y los scripts necesarios para ejecutar y evaluar las 3 partes de la Práctica 4 de Visión por Computador. Las pruebas están diseñadas para ejecutarse y ser probadas en equipos con aceleración gráfica (NVIDIA CUDA).
 
 ---
 
-## 1. Configurar la Máquina (Apenas llegues)
+## 1. Instalación Rápida del Entorno (Miniconda)
 
-```bash
-# Instalar dependencias de Python
-pip install -r requirements_lab.txt
+Para evitar errores de versiones o dependencias al clonar este repositorio en otra máquina, preparé scripts automáticos que instalan todo lo necesario dentro de un entorno virtual de Conda.
 
-# Verificar que CUDA está disponible
-python3 -c "import torch; print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
+Dependiendo del sistema operativo de la máquina donde se vaya a calificar/probar, ejecuta:
+
+**Si usas Windows:**
+Dale doble clic al archivo `setup_env.bat` o ejecútalo desde el Anaconda Prompt:
+```cmd
+setup_env.bat
 ```
 
-### ⚠️ MUY IMPORTANTE: nvidia-smi en terminal separada
+**Si usas Linux (Ubuntu/Kubuntu) o macOS:**
+Abre una terminal en la raíz de este proyecto y ejecuta:
+```bash
+bash setup_env.sh
+```
 
-La rúbrica pide mostrar **el comando `nvidia-smi`** en la grabación. Abre una **segunda terminal** y ejecuta:
+Una vez que el script termine de descargar todo, **activa el entorno** antes de correr cualquier prueba:
+```bash
+conda activate vision_p4
+```
+
+---
+
+## 2. Preparación de Evidencias (nvidia-smi)
+
+Como parte de la rúbrica, es necesario demostrar el consumo de VRAM en tiempo real. Por ello, abre una **segunda terminal**, activa el entorno, y déjala a un lado de la pantalla ejecutando:
 
 ```bash
 watch -n 1 nvidia-smi
 ```
-
-Esto mostrará el uso de la GPU actualizándose cada segundo. **Deja esta terminal visible** mientras ejecutas todas las pruebas. Así quedará grabado en el video de evidencia.
+*(Nota: En Windows puedes usar simplemente `nvidia-smi -l 1`)*
 
 ---
 
-## 2. Parte 1A — Webcam con Frutas (Segmentación)
+## 3. Ejecución Parte 1A: Segmentación con Webcam
 
-Copia tu `best.pt` a esta carpeta (o usa la ruta completa).
+Para probar el modelo de Transfer Learning (`best.pt`) que entrené específicamente para segmentar manzanas, bananas y naranjas:
 
-**Probar en GPU:**
+**Prueba en GPU:**
 ```bash
-python3 practica4_1A_export/webcam_fruit_seg.py --device gpu --model practica4_1A_export/best.pt
+python practica4_1A_export/webcam_fruit_seg.py --device gpu --model practica4_1A_export/best.pt
 ```
 
-**Probar en CPU:**
+**Prueba en CPU:**
 ```bash
-python3 practica4_1A_export/webcam_fruit_seg.py --device cpu --model practica4_1A_export/best.pt
+python practica4_1A_export/webcam_fruit_seg.py --device cpu --model practica4_1A_export/best.pt
+```
+*Puedes presionar la tecla `s` mientras corre el programa para guardar automáticamente una captura de pantalla de la detección.*
+
+---
+
+## 4. Ejecución Parte 1B: Benchmarks (YOLO y Super Resolución)
+
+Asegúrate de tener el archivo `video_prueba.mp4` en la raíz de la carpeta. 
+
+Para ejecutar las métricas de rendimiento de YOLO:
+```bash
+python practica4_1B_yolo_benchmark.py --video video_prueba.mp4
+```
+*(Este script procesará el video con YOLOv12 y YOLOv26, alternando entre CPU y GPU de forma automática. Al final generará los videos de salida con los FPS y la MAC Address impresos).*
+
+Para ejecutar el modelo de Super Resolución:
+```bash
+python practica4_1B_superres_benchmark.py --video video_prueba.mp4
 ```
 
-- Pon una fruta (manzana, banana, naranja) frente a la webcam
-- Observa los FPS, RAM, VRAM y MAC Address en el overlay
-- Presiona `s` para guardar screenshots, `q` para salir
-
 ---
 
-## 3. Parte 1B — Benchmark YOLO (YOLOv12 y YOLOv26)
+## 5. Ejecución Parte 1C: Pipeline C++ (OpenCV + CUDA)
 
-Necesitas un video `.mp4`. Cópialo a esta carpeta (ej: `video.mp4`).
+Esta parte del proyecto evalúa los cuellos de botella al transferir datos. Aplica una secuencia de filtros (Gaussiano -> Morfología -> Canny -> Ecualización) comparando una arquitectura CPU pura, una Híbrida y una 100% en GPU.
 
+1. Entra a la carpeta de C++ y compila el binario:
 ```bash
-python3 practica4_1B_yolo_benchmark.py --video video.mp4
+cd parte1c_cpp
+./build.sh
+cd build
 ```
 
-El script hará automáticamente:
-1. YOLOv12 en CPU → guarda `out_yolo12n.pt_cpu.mp4`
-2. YOLOv26 en CPU → guarda `out_yolo26n.pt_cpu.mp4`
-3. YOLOv12 en GPU → guarda `out_yolo12n.pt_gpu.mp4`
-4. YOLOv26 en GPU → guarda `out_yolo26n.pt_gpu.mp4`
-
-Cada video muestra en overlay: **Modelo, Device, FPS, RAM, VRAM, MAC Address**.
-
----
-
-## 4. Parte 1B — Benchmark Super Resolución (Real-ESRGAN)
-
-Idealmente usa un video de **baja resolución (360p)** para que la VRAM no colapse con el upscale x4.
-
+2. Ejecuta el programa pasándole el video de prueba:
 ```bash
-python3 practica4_1B_superres_benchmark.py --video video.mp4
+./benchmark_cv ../../video_prueba.mp4
 ```
-
-Generará: `out_sr_cpu.mp4` y `out_sr_gpu.mp4`.
-
----
-
-## 5. Parte 1C — OpenCV C++ Pipeline CPU vs GPU vs Híbrido
-
-1. Entra a la carpeta C++:
-   ```bash
-   cd parte1c_cpp
-   ```
-
-2. Compila (solo una vez):
-   ```bash
-   ./build.sh
-   ```
-
-3. Ejecuta el benchmark:
-   ```bash
-   cd build
-   ./benchmark_cv ../../video.mp4
-   ```
-
-   Verás en la consola un cuadro comparativo con tiempos por frame para los **3 pipelines**:
-   - **CPU puro**
-   - **GPU-only** (eficiente)
-   - **CPU↔GPU híbrido** (ineficiente)
-
-   Al final se abren 4 ventanas con los resultados visuales (toma captura de pantalla).
-   También imprime la **reflexión** sobre cuándo vale la pena usar GPU.
-
----
-
-## 6. Checklist de Evidencias para la Grabación
-
-Mientras grabas la pantalla (OBS Studio), asegúrate de que se vea:
-
-- [x] Terminal con `watch -n 1 nvidia-smi` visible (uso de VRAM)
-- [x] FPS en GPU vs CPU (overlay en cada script)
-- [x] Uso de memoria RAM (overlay en cada script)
-- [x] MAC Address del computador (overlay en cada script)
-- [x] Ventanas de resultado visual de la Parte 1C (4 ventanas)
-- [x] Resumen de consola con el Speedup de la Parte 1C
+Al finalizar, la consola imprimirá una tabla comparativa con los milisegundos de latencia por frame y una reflexión técnica sobre el cuello de botella del PCI-Express. También se abrirán las 4 ventanas visuales comprobando que los resultados de Canny son matemáticamente idénticos en todas las arquitecturas.
